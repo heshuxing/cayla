@@ -1,30 +1,30 @@
 <template>
   <div class="preview">
-    <div class="back" @click="$router.back()">
-      <svg class="icon" viewBox="0 0 24 24">
-        <path d="M15 18l-6-6 6-6" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      返回
+    <div class="navbar">
+      <div class="nav-back" @click="$router.back()">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M15 18l-6-6 6-6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="nav-title">{{ works[index]?.title || '预览' }}</div>
     </div>
     <div class="preview-container">
       <img
-        ref="zoomImg"
         :src="works[index].remote"
         @error="fallbackImage"
-        class="full-image"
+        :class="['full-image', { zoomed: isZoomed, loaded: imageLoaded }]"
         alt="作品大图"
         loading="lazy"
+        @click="toggleZoom"
         @touchstart="onTouchStart"
         @touchend="onTouchEnd"
+        @load="onImageLoad"
       />
     </div>
   </div>
 </template>
 
-
-
 <script>
-import mediumZoom from 'medium-zoom';
 import worksData from '../assets/works.json';
 
 export default {
@@ -35,7 +35,10 @@ export default {
       works: worksData.map(item => ({ ...item })),
       startX: 0,
       endX: 0,
-      zoom: null,
+      startY: 0,
+      endY: 0,
+      isZoomed: false,
+      imageLoaded: false
     };
   },
   mounted() {
@@ -43,49 +46,45 @@ export default {
     if (!isNaN(id) && id >= 0 && id < this.works.length) {
       this.index = id;
     }
-    this.$nextTick(() => {
-      this.attachZoom();
-    });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   },
   methods: {
     fallbackImage() {
       this.works[this.index].remote = this.works[this.index].local;
     },
+    toggleZoom() {
+      this.isZoomed = !this.isZoomed;
+    },
     onTouchStart(e) {
       this.startX = e.changedTouches[0].clientX;
+      this.startY = e.changedTouches[0].clientY;
     },
     onTouchEnd(e) {
       this.endX = e.changedTouches[0].clientX;
-      const delta = this.endX - this.startX;
-      if (Math.abs(delta) < 50) return;
-      if (delta > 50 && this.index > 0) this.index--;
-      else if (delta < -50 && this.index < this.works.length - 1) this.index++;
+      this.endY = e.changedTouches[0].clientY;
+
+      const deltaX = this.endX - this.startX;
+      const deltaY = this.endY - this.startY;
+
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0 && this.index > 0) this.index--;
+        else if (deltaX < 0 && this.index < this.works.length - 1) this.index++;
+        this.imageLoaded = false;
+      }
     },
-    attachZoom() {
-      if (this.zoom) this.zoom.detach();
-      this.zoom = mediumZoom(this.$refs.zoomImg, {
-        background: '#000',
-        container: '#zoom-container',
-        margin: 24,
-        scrollOffset: 0,
-      });
-    },
-  },
-  watch: {
-    index() {
-      this.$nextTick(() => {
-        this.attachZoom();
-      });
-    },
-  },
+    onImageLoad() {
+      this.imageLoaded = true;
+    }
+  }
 };
 </script>
 
 <style>
 .preview {
-  padding: 60px 0 40px;
+  padding: 0 0 40px;
   position: relative;
   text-align: center;
+  margin-top: 48px;
 }
 
 .preview-container {
@@ -99,30 +98,57 @@ export default {
   height: auto;
   border-radius: 6px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, opacity 0.5s ease;
   cursor: zoom-in;
-  transition: all 0.3s ease;
+  opacity: 0;
 }
 
-.back {
+.full-image.loaded {
+  opacity: 1;
+}
+
+.full-image.zoomed {
+  transform: scale(1.5);
+  cursor: zoom-out;
+  z-index: 2;
+  position: relative;
+}
+
+/* 顶部吸顶栏样式 */
+.navbar {
   position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 1000;
-  background: #ffffffee;
-  color: #333;
-  border-radius: 20px;
-  padding: 6px 12px 6px 10px;
-  font-size: 14px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background-color: #1677ff;
+  color: #fff;
   display: flex;
   align-items: center;
-  gap: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  cursor: pointer;
-  user-select: none;
+  padding: 0 12px;
+  z-index: 1001;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.back .icon {
-  width: 16px;
-  height: 16px;
+.nav-back {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.nav-back .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.nav-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  margin-right: 32px;
 }
 </style>

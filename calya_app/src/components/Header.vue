@@ -2,7 +2,7 @@
   <section class="profile-wrapper">
     <div class="profile-card">
       <div class="avatar-block">
-        <img src="/images/avatar.jpg" class="avatar" />
+        <img src="/images/logo_big.jpg" class="avatar" />
         <h1 class="name">深蓝设计</h1>
         <p class="location">
           <svg class="icon" viewBox="0 0 24 24">
